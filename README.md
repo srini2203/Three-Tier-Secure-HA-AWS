@@ -15,7 +15,7 @@ certification.
 
 ## Architecture
 
-![Architecture](architecture/images/Architecture%20diagram.drawio.png)
+![Architecture](architecture/images/Architecture_Diagram.png)
 
 Full write-up: [`architecture/architecture-specification.md`](architecture/architecture-specification.md)
 
