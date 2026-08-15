@@ -1,0 +1,56 @@
+# Deployment Architecture
+
+> Note: this project deploys via **Terraform**, not CloudFormation.
+> (An earlier version of the diagram overview table in
+> `architecture/Readme.md` referenced CloudFormation — that was
+> inaccurate for this repo and should be read as Terraform
+> throughout.)
+
+## Deployment Model: Validate-Only
+
+This repository is validated, not applied. `terraform init` and
+`terraform validate` (and optionally `terraform plan`) are run
+against a real AWS provider config; `terraform apply` is deliberately
+never run against a live account. See `docs/design-decisions.md` for
+why.
+
+## Workflow
+
+1. cd terraform
+2. cp terraform.tfvars.example terraform.tfvars
+   -> fill in notification_email (required) and anything else you want to override
+3. terraform init
+   -> downloads the aws (~>5.0) and random (~>3.5) providers
+4. terraform validate
+   -> confirms the configuration is internally consistent
+5. terraform plan
+   -> shows what WOULD be created; safe, makes no AWS calls that create resources
+6. (not run in this repo) terraform apply
+
+## Ordering / Dependency Graph
+
+Terraform resolves this automatically from resource references, but the logical build order is:
+
+providers.tf
+  -> vpc.tf (VPC, subnets, IGW, NAT, route tables)
+     -> security-groups.tf (ALB / App / DB SGs, reference VPC + each other)
+        -> database.tf (RDS, Secrets Manager — reference DB SG + db subnets)
+        -> compute.tf (IAM, launch template, ALB, ASG — reference App/ALB SGs, app subnets, public subnets, and the Secrets Manager secret name for the user-data comment)
+           -> monitoring.tf (CloudWatch alarms — reference the ASG and RDS instance created above)
+
+## State
+
+- No remote backend is configured by default — state is local (`terraform.tfstate`, gitignored).
+- An S3 + DynamoDB backend block is present but commented out in `terraform/providers.tf`, ready to uncomment once a state bucket and lock table exist. This matters mainly if this project moves from solo/local use to anything collaborative, since local state has no locking and isn't shared.
+
+## What Deploying For Real Would Require
+
+1. Uncomment and configure the `backend "s3"` block, create the bucket + DynamoDB table first (outside Terraform, to avoid a chicken-and-egg problem).
+2. Run `terraform apply`, confirm the plan.
+3. Confirm the SNS email subscription (link arrives via email).
+4. Point real application code / an AMI-baking pipeline at the launch template instead of the placeholder `user_data` bootstrap in `compute.tf`.
+5. Add the WAF + HTTPS/ACM + CI/CD pieces listed under the README's Future Improvements — none of which are provisioned in this repo today.
+
+## Terraform Mapping
+
+This doc describes the deployment *process*; the resources it provisions are catalogued in `architecture-specification.md` section 5 and in the per-tier docs (`architecture/network`, `architecture/security`, `architecture/monitoring`).

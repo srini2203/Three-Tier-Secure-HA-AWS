@@ -1,0 +1,57 @@
+# Security Architecture
+
+## Defense in Depth — 4 Layers
+
+### 1. Network isolation
+- 3-tier subnet split: only the ALB sits in a public subnet.
+- App and DB tiers have no route to the internet in either direction
+  (app has NAT for outbound only; DB has no route table at all).
+- See `architecture/network` for the routing detail.
+
+### 2. Access control — Security Groups
+Traffic is scoped by security group reference, not CIDR block, so the
+allowed path is explicit at every hop:
+- **ALB SG**: inbound 80 from `0.0.0.0/0`.
+- **App SG**: inbound `app_port` from the ALB SG only.
+- **DB SG**: inbound `db_port` from the App SG only; zero egress
+  rules (RDS never initiates outbound connections).
+- No security group in this project opens port 22, anywhere.
+
+### 3. Identity — IAM, not credentials
+- The EC2 instance role is assumed via an instance profile —
+  temporary credentials only, nothing to leak from the instance.
+- `SecretsManagerReadWrite` (AWS-managed) and
+  `AmazonSSMManagedInstanceCore` are the only two policies attached.
+  Scoping Secrets Manager access down to the single secret ARN is a
+  documented "v2" tightening (`docs/design-decisions.md`), not an
+  oversight.
+- Instance access is via **SSM Session Manager only** — no SSH key,
+  no bastion host, no open port 22.
+- IMDSv2 is enforced on the launch template
+  (`http_tokens = "required"`), closing the SSRF-to-instance-role
+  credential theft path that IMDSv1 allows.
+
+### 4. Data protection
+- RDS storage is encrypted at rest with an AWS-managed KMS key
+  (`storage_encrypted = true`).
+- DB master credentials are generated with `random_password` and
+  stored only in Secrets Manager — never a plaintext Terraform
+  variable, never in `user_data`.
+- RDS is not publicly accessible (`publicly_accessible = false`) and
+  sits in subnets with no internet route regardless.
+
+## Explicitly Not Covered (Documented, Not Hidden)
+
+- No WAF in front of the ALB yet (README → Future Improvements).
+- Secrets Manager IAM policy is the AWS-managed
+  `SecretsManagerReadWrite`, not scoped to one ARN yet.
+- No live deployment, so no live-traffic security validation
+  (penetration test, GuardDuty findings, etc.) exists for this repo.
+
+## Terraform Mapping
+
+`terraform/security-groups.tf` (all 3 SGs),
+`terraform/compute.tf` (IAM role, instance profile, policy
+attachments, launch template `metadata_options` block),
+`terraform/database.tf` (`storage_encrypted`, `publicly_accessible`,
+`random_password`, Secrets Manager resources).

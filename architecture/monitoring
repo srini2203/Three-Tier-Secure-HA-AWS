@@ -1,0 +1,47 @@
+# Monitoring Architecture
+
+## Overview
+
+CloudWatch alarms watch the compute and data tiers; SNS fans out a
+single email notification channel. No dashboards or log aggregation
+are in scope for this project — see Future Improvements below.
+
+## Alarms
+
+| Alarm | Metric | Threshold | Trigger condition |
+|---|---|---|---|
+| `asg-high-cpu` | `AWS/EC2` `CPUUtilization`, averaged across the ASG | > 80% | 2 consecutive 5-min periods |
+| `rds-high-cpu` | `AWS/RDS` `CPUUtilization` | > 80% | 2 consecutive 5-min periods |
+| `rds-low-storage` | `AWS/RDS` `FreeStorageSpace` | < 2 GiB | 1 evaluation period |
+
+All three publish to the same SNS topic (`alerts`) on alarm; the CPU
+alarms also notify on return to OK, so a resolved incident is visible
+without having to check the console.
+
+## SNS Subscription
+
+- Single email subscription (`var.notification_email`).
+- AWS sends a confirmation link to that address after `terraform
+  apply` — the subscription stays `PendingConfirmation` and delivers
+  nothing until it's clicked. This is an AWS SNS behavior, not
+  something Terraform can complete unattended.
+
+## Why Not More
+
+This project intentionally keeps monitoring to "would page someone
+for an actual problem" — CPU exhaustion and DB storage exhaustion are
+the two failure modes most likely to actually occur in a small,
+Multi-AZ, auto-scaled setup like this one. A production deployment
+would add:
+
+- ALB target 5xx rate and unhealthy host count alarms
+- RDS `FreeableMemory` and connection-count alarms
+- Centralized logging (CloudWatch Logs / a log aggregator) — none of
+  the app or infra logs are shipped anywhere in this repo today
+- A CloudWatch dashboard instead of relying on individual alarms
+
+## Terraform Mapping
+
+`terraform/monitoring.tf` — `aws_sns_topic`,
+`aws_sns_topic_subscription`, and the three
+`aws_cloudwatch_metric_alarm` resources listed above.

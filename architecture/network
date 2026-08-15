@@ -1,0 +1,47 @@
+# Network Architecture
+
+## VPC
+
+- Single VPC, CIDR `10.0.0.0/16` (`var.vpc_cidr`), DNS support and
+  hostnames enabled.
+- Spans 2 Availability Zones (`var.azs`, default
+  `ap-south-1a` / `ap-south-1b`).
+
+## Subnet Layout
+
+All subnet CIDRs are derived from `var.vpc_cidr` with `cidrsubnet()`
+in `terraform/vpc.tf` — one input to keep in sync, not two.
+
+| Tier | AZ 1 | AZ 2 | Purpose |
+|---|---|---|---|
+| Public | `10.0.0.0/24` | `10.0.1.0/24` | ALB |
+| Private-app | `10.0.10.0/24` | `10.0.11.0/24` | EC2 / ASG |
+| Private-db | `10.0.20.0/24` | `10.0.21.0/24` | RDS |
+
+## Routing
+
+- **Internet Gateway**: attached to the VPC, referenced only by the
+  public route table.
+- **NAT Gateway**: single instance, placed in the first public
+  subnet, with its own Elastic IP. Both private-app subnets route
+  `0.0.0.0/0` through it. This is a deliberate cost trade-off (one
+  NAT costs roughly half of one-per-AZ) — see `docs/tradeoffs.md`
+  for the availability implication.
+- **Private-db subnets** are intentionally left without an explicit
+  route table association. They fall back to the VPC's main
+  (default) route table, which has only the implicit local route —
+  no path to or from the internet, by default rather than by a rule
+  that could be misconfigured later.
+
+## Why 2 AZs, Not 3
+
+Two AZs is the minimum for genuine HA (survive one AZ failure) and
+keeps the subnet/CIDR count manageable for a project at this scale.
+A production deployment serving real traffic would typically use 3.
+
+## Terraform Mapping
+
+All resources described here are in `terraform/vpc.tf`:
+`aws_vpc`, `aws_internet_gateway`, `aws_subnet` (×3, using `count`),
+`aws_eip`, `aws_nat_gateway`, `aws_route_table` (×2),
+`aws_route_table_association` (×2 sets).
