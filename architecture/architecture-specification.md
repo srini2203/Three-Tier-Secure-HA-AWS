@@ -31,27 +31,7 @@ reasoning behind each decision. For narrower deep-dives, see:
 - CI/CD automation of `terraform apply`.
 
 ## 4. High-Level Architecture
-Internet
-                        |
-                 [Internet Gateway]
-                        |
-                ┌───────┴────────┐
-                │  Public subnets │  (2 AZs)
-                │  Application    │
-                │  Load Balancer  │
-                └───────┬────────┘
-                        | app_port
-                ┌───────┴────────┐
-                │ Private-app     │  (2 AZs)
-                │ subnets — EC2   │
-                │ in an ASG       │
-                └───────┬────────┘
-                        | db_port
-                ┌───────┴────────┐
-                │ Private-db      │  (2 AZs)
-                │ subnets — RDS   │
-                │ MySQL Multi-AZ  │
-                └────────────────┘
+
 
 See `architecture/network` for the full routing picture (NAT Gateway
 placement, route tables) and `architecture/images/Architecture_Diagram.png`
