@@ -54,8 +54,8 @@ Internet
                 └────────────────┘
 
 See `architecture/network` for the full routing picture (NAT Gateway
-placement, route tables) and `architecture/High level Diagram.png`
-for the AWS-icon version of this diagram.
+placement, route tables) and `architecture/images/Architecture_Diagram.png`
+for the AWS icon version of this diagram.
 
 ## 5. Tiers
 
