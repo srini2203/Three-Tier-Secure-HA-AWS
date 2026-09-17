@@ -1,9 +1,9 @@
-#############################################
+
 # Security Groups — tier-scoped: ALB -> App -> DB
 #
 # Each tier is reachable only from its designated upstream security
 # group, not by CIDR range. See docs/security.md.
-#############################################
+
 
 resource "aws_security_group" "alb" {
   name        = "${var.project_name}-alb-sg"

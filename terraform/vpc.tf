@@ -1,6 +1,5 @@
-#############################################
+
 # VPC
-#############################################
 
 resource "aws_vpc" "this" {
   cidr_block           = var.vpc_cidr
@@ -20,7 +19,6 @@ resource "aws_internet_gateway" "this" {
   }
 }
 
-#############################################
 # Subnets — 3 tiers x 2 AZs
 #
 # Carved out of var.vpc_cidr with cidrsubnet() so the whole network
@@ -30,7 +28,7 @@ resource "aws_internet_gateway" "this" {
 #   public       10.0.0.0/24, 10.0.1.0/24    — ALB
 #   private-app  10.0.10.0/24, 10.0.11.0/24  — EC2 / ASG
 #   private-db   10.0.20.0/24, 10.0.21.0/24  — RDS
-#############################################
+
 
 resource "aws_subnet" "public" {
   count                   = length(var.azs)
@@ -69,7 +67,6 @@ resource "aws_subnet" "private_db" {
   }
 }
 
-#############################################
 # NAT Gateway — single, not one per AZ
 #
 # Deliberate cost trade-off (see docs/design-decisions.md and
@@ -77,7 +74,7 @@ resource "aws_subnet" "private_db" {
 # has an issue, the app subnet in the *other* AZ loses outbound
 # internet until it recovers, but the app stays reachable via the ALB
 # regardless — inbound traffic and the DB path don't depend on NAT.
-#############################################
+
 
 resource "aws_eip" "nat" {
   domain = "vpc"
@@ -98,7 +95,6 @@ resource "aws_nat_gateway" "this" {
   depends_on = [aws_internet_gateway.this]
 }
 
-#############################################
 # Route tables
 #
 # Public  -> IGW
@@ -109,7 +105,6 @@ resource "aws_nat_gateway" "this" {
 # either direction. See docs/security.md: "falls back to the VPC
 # default table (local-only) — fully isolated by default, not by
 # rule alone."
-#############################################
 
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.this.id

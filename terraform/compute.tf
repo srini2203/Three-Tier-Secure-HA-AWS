@@ -1,6 +1,6 @@
-#############################################
+
 # AMI — latest Amazon Linux 2023
-#############################################
+
 
 data "aws_ami" "amazon_linux" {
   most_recent = true
@@ -17,7 +17,7 @@ data "aws_ami" "amazon_linux" {
   }
 }
 
-#############################################
+
 # IAM — instance role
 #
 # No access keys anywhere: the EC2 instance assumes this role via
@@ -26,7 +26,7 @@ data "aws_ami" "amazon_linux" {
 # readability at this project's scope — scoping it down to the one
 # secret ARN is a documented "v2" tightening, see
 # docs/design-decisions.md.
-#############################################
+
 
 resource "aws_iam_role" "app" {
   name = "${var.project_name}-app-role"
@@ -62,9 +62,8 @@ resource "aws_iam_instance_profile" "app" {
   role = aws_iam_role.app.name
 }
 
-#############################################
 # Launch Template
-#############################################
+
 
 resource "aws_launch_template" "app" {
   name_prefix   = "${var.project_name}-app-"
@@ -108,9 +107,8 @@ resource "aws_launch_template" "app" {
   }
 }
 
-#############################################
 # Application Load Balancer
-#############################################
+
 
 resource "aws_lb" "app" {
   name               = "${var.project_name}-alb"
@@ -158,9 +156,8 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-#############################################
 # Auto Scaling Group
-#############################################
+
 
 resource "aws_autoscaling_group" "app" {
   name                = "${var.project_name}-asg"

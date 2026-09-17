@@ -1,11 +1,7 @@
-# Copy to terraform.tfvars and fill in your own values.
-# terraform.tfvars is gitignored — never commit real values.
-
 project_name = "three-tier-ha-aws"
 environment  = "dev"
 aws_region   = "ap-south-1"
 
-# Required — no default. AWS sends a confirmation link here after apply.
 notification_email = "you@example.com"
 
 vpc_cidr = "10.0.0.0/16"
@@ -21,7 +17,7 @@ db_name           = "appdb"
 db_username       = "appadmin"
 
 # Multi-AZ is NOT covered by AWS free tier — see docs/cost-estimate.md.
-# Set to false for a free-tier-only dev deployment.
+
 multi_az = true
 
 asg_min_size         = 2

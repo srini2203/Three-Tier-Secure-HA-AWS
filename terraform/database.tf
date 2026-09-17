@@ -1,6 +1,6 @@
-#############################################
+
 # Database — RDS MySQL, Multi-AZ, credentials in Secrets Manager
-#############################################
+
 
 resource "aws_db_subnet_group" "this" {
   name       = "${var.project_name}-db-subnet-group"
@@ -48,11 +48,10 @@ resource "aws_db_instance" "this" {
   }
 }
 
-#############################################
 # Secrets Manager — the app reads DB credentials from here at
 # startup (via the IAM role in compute.tf), never from user-data or
 # a Terraform variable.
-#############################################
+
 
 resource "aws_secretsmanager_secret" "db_credentials" {
   name        = "${var.project_name}/${var.environment}/db-credentials"
