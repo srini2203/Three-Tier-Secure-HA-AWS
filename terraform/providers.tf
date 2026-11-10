@@ -12,14 +12,13 @@ terraform {
     }
   }
 
-  # Uncomment once you've created the state bucket + lock table.
-  # backend "s3" {
-  #   bucket         = "REPLACE-ME-terraform-state-bucket"
-  #   key            = "three-tier-ha-aws/terraform.tfstate"
-  #   region         = "ap-south-1"
-  #   dynamodb_table = "REPLACE-ME-terraform-locks"
-  #   encrypt        = true
-  # }
+  backend "s3" {
+    bucket       = "three-tier-ha-aws-643681787444-ap-south-1-tfstate"
+    key          = "three-tier-ha-aws/terraform.tfstate"
+    region       = "ap-south-1"
+    encrypt      = true
+    use_lockfile = true
+  }
 }
 
 provider "aws" {
@@ -34,5 +33,4 @@ provider "aws" {
   }
 }
 
-# Random provider is used in database.tf to generate the DB master password.
 provider "random" {}

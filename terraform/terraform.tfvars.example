@@ -18,7 +18,7 @@ db_username       = "appadmin"
 
 # Multi-AZ is NOT covered by AWS free tier — see docs/cost-estimate.md.
 
-multi_az = true
+multi_az = false
 
 asg_min_size         = 2
 asg_max_size         = 4

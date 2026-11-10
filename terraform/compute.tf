@@ -50,6 +50,11 @@ resource "aws_iam_role_policy_attachment" "secrets_manager" {
   policy_arn = "arn:aws:iam::aws:policy/SecretsManagerReadWrite"
 }
 
+resource "aws_iam_role_policy_attachment" "ecr_read" {
+  role       = aws_iam_role.app.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
 # SSM only, no SSH — enables Session Manager access with no open
 # port 22 anywhere in the design. See docs/security.md.
 resource "aws_iam_role_policy_attachment" "ssm" {
@@ -84,15 +89,45 @@ resource "aws_launch_template" "app" {
     http_put_response_hop_limit = 1
   }
 
-  user_data = base64encode(<<-EOT
-    #!/bin/bash
-    # Placeholder bootstrap — a real deployment would pull the app
-    # container/artifact here and read DB credentials from
-    # Secrets Manager (secret: ${aws_secretsmanager_secret.db_credentials.name})
-    # via the instance role, never from user-data itself.
-    dnf install -y amazon-ssm-agent
-    systemctl enable --now amazon-ssm-agent
-  EOT
+  user_data = base64encode(<<-EOF
+  #!/bin/bash
+  set -eux
+
+  dnf update -y
+  dnf install -y docker jq awscli
+  systemctl enable --now docker
+  
+
+  # Login to ECR
+  aws ecr get-login-password --region ${var.aws_region} | \
+    docker login --username AWS --password-stdin ${aws_ecr_repository.app.repository_url}
+
+  # Pull application image
+  docker pull ${aws_ecr_repository.app.repository_url}:v1
+
+  # Retrieve database credentials from Secrets Manager
+  SECRET_JSON=$(aws secretsmanager get-secret-value \
+    --secret-id ${aws_secretsmanager_secret.db_credentials.arn} \
+    --query SecretString \
+    --output text \
+    --region ${var.aws_region})
+
+  DB_HOST=$(echo "$SECRET_JSON" | jq -r '.host')
+  DB_USER=$(echo "$SECRET_JSON" | jq -r '.username')
+  DB_PASSWORD=$(echo "$SECRET_JSON" | jq -r '.password')
+  DB_NAME=$(echo "$SECRET_JSON" | jq -r '.dbname')
+
+  # Run application container
+  docker run -d \
+    --name task-tracker-api \
+    --restart unless-stopped \
+    -p 8080:8080 \
+    -e DB_HOST="$DB_HOST" \
+    -e DB_USER="$DB_USER" \
+    -e DB_PASSWORD="$DB_PASSWORD" \
+    -e DB_NAME="$DB_NAME" \
+    ${aws_ecr_repository.app.repository_url}:v1
+  EOF
   )
 
   tag_specifications {
@@ -105,6 +140,9 @@ resource "aws_launch_template" "app" {
   lifecycle {
     create_before_destroy = true
   }
+  depends_on = [
+    aws_secretsmanager_secret_version.db_credentials
+  ]
 }
 
 # Application Load Balancer

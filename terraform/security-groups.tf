@@ -1,6 +1,6 @@
 
 # Security Groups — tier-scoped: ALB -> App -> DB
-#
+
 # Each tier is reachable only from its designated upstream security
 # group, not by CIDR range. See docs/security.md.
 
