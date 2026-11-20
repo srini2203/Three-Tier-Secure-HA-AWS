@@ -1,4 +1,4 @@
-# Three-Tier Secure HA AWS Infrastructure and AI Incident Triage
+# AWS INFRASTRUCTURE WITH AI-POWERED INCIDENT INVESTIGATION AGENT
 
 **Portfolio project:** Terraform-managed three-tier AWS infrastructure with an event-driven AI incident investigation agent.
 
